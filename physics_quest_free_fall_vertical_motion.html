@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physics Quest: Free-Fall & Vertical Motion</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap');
+    
+    body {
+      font-family: 'Fredoka', 'Outfit', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Custom Glassmorphism Cards */
+    .glass-card {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .glass-card-interactive {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .glass-card-interactive:hover {
+      transform: translateY(-2px);
+      border-color: rgba(168, 85, 247, 0.5);
+      box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.25);
+    }
+
+    /* Pulse Glow animations */
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 15px rgba(236, 72, 153, 0.4); }
+      50% { box-shadow: 0 0 30px rgba(236, 72, 153, 0.8); }
+    }
+
+    .mic-active {
+      animation: pulse-glow 1.5s infinite;
+      border-color: #ec4899 !important;
+    }
+
+    /* Range slider custom styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      height: 8px;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 22px;
+      width: 22px;
+      border-radius: 50%;
+      background: #c084fc;
+      cursor: pointer;
+      box-shadow: 0 0 10px #c084fc;
+      transition: transform 0.1s, background-color 0.1s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+      background: #e879f9;
+    }
+
+    /* Custom Canvas Display */
+    #simCanvas {
+      touch-action: none;
+      border-radius: 1rem;
+      background: radial-gradient(circle at 50% 20%, #1e293b 0%, #0f172a 100%);
+    }
+
+    /* Speech equalizer bars */
+    .eq-bar {
+      width: 4px;
+      height: 16px;
+      background-color: #ec4899;
+      border-radius: 2px;
+      transition: height 0.1s ease;
+    }
+
+    /* Animation keyframes */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.25s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen pb-6 selection:bg-purple-500 selection:text-white">
+
+  <!-- TOP HEADER / NAV BAR -->
+  <header class="w-full glass-card border-b border-slate-700/50 sticky top-0 z-50 px-4 py-3 shadow-lg">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+      <!-- Title & Logo -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/30">
+          <i class="fa-solid fa-atom text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 via-pink-300 to-amber-200">
+            PhysicsQuest
+          </h1>
+          <p class="text-xs text-purple-300 font-medium">Free-Fall & Vertical Motion Lab</p>
+        </div>
+      </div>
+
+      <!-- Scoreboard & Streaks -->
+      <div class="flex items-center space-x-3 sm:space-x-6 bg-slate-900/70 px-4 py-1.5 rounded-full border border-slate-700/60 shadow-inner">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-trophy text-amber-400 text-lg"></i>
+          <div>
+            <span class="text-[10px] text-slate-400 block -mb-1">SCORE</span>
+            <span id="scoreDisplay" class="font-bold text-amber-300 text-base">0</span>
+          </div>
+        </div>
+        <div class="w-px h-6 bg-slate-700"></div>
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-fire text-orange-500 text-lg"></i>
+          <div>
+            <span class="text-[10px] text-slate-400 block -mb-1">STREAK</span>
+            <span id="streakDisplay" class="font-bold text-orange-400 text-base">0</span>
+          </div>
+        </div>
+        <div class="w-px h-6 bg-slate-700"></div>
+        <div id="badgeContainer" class="flex items-center">
+          <span class="text-xs bg-purple-900/80 text-purple-200 border border-purple-500/30 px-2.5 py-0.5 rounded-md font-semibold">Novice</span>
+        </div>
+      </div>
+
+      <!-- System Controls (Voice & Audio Toggle) -->
+      <div class="flex items-center space-x-2">
+        <button id="micBtn" onclick="toggleVoiceControl()" class="px-3 py-1.5 rounded-lg glass-card hover:bg-slate-700/80 transition flex items-center space-x-2 border border-slate-600 text-xs font-semibold text-pink-300" title="Toggle Voice Commands & Voice Input">
+          <i id="micIcon" class="fa-solid fa-microphone-slash text-slate-400"></i>
+          <span id="micStatusText">Voice Off</span>
+          <div id="eqContainer" class="hidden flex items-center space-x-0.5 ml-1">
+            <div class="eq-bar h-2"></div>
+            <div class="eq-bar h-4"></div>
+            <div class="eq-bar h-3"></div>
+          </div>
+        </button>
+
+        <button id="audioBtn" onclick="toggleMute()" class="p-2 rounded-lg glass-card hover:bg-slate-700/80 transition text-amber-300" title="Toggle Sound Effects">
+          <i id="audioIcon" class="fa-solid fa-volume-high text-base"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto w-full px-4 pt-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN: PHYSICS SIMULATION CANVAS & CONTROLS (7 Cols) -->
+    <section class="lg:col-span-7 flex flex-col space-y-4">
+      
+      <!-- Canvas Card -->
+      <div class="glass-card p-4 rounded-2xl flex flex-col items-center relative overflow-hidden shadow-2xl">
+        
+        <!-- Canvas Overlay Telemetry HUD -->
+        <div class="absolute top-6 left-6 z-10 bg-slate-900/85 backdrop-blur border border-slate-700/80 rounded-xl p-3 text-xs space-y-1.5 font-mono text-purple-200 pointer-events-none shadow-xl min-w-[190px]">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-1">
+            <span class="text-slate-400 font-bold">TELEMETRY</span>
+            <span id="simStatusTag" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 uppercase font-bold">Ready</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Time (t):</span>
+            <span id="diagTime" class="text-pink-400 font-bold">0.00 s</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Altitude (y):</span>
+            <span id="diagHeight" class="text-emerald-400 font-bold">45.00 m</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Velocity (v):</span>
+            <span id="diagVel" class="text-cyan-400 font-bold">0.00 m/s</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Peak (y<sub>max</sub>):</span>
+            <span id="diagPeak" class="text-amber-300 font-bold">45.00 m</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Gravity (g):</span>
+            <span id="diagGrav" class="text-purple-300 font-bold">9.81 m/s²</span>
+          </div>
+
+          <!-- Live Velocity Direction & Gauge Bar -->
+          <div class="pt-1">
+            <div class="text-[10px] text-slate-400 flex justify-between mb-0.5">
+              <span>Vel Vector</span>
+              <span id="velDirLabel" class="font-bold text-slate-300">Rest</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
+              <div id="velGaugeDown" class="h-full bg-rose-500 transition-all duration-75" style="width: 0%"></div>
+              <div class="w-0.5 h-full bg-white"></div>
+              <div id="velGaugeUp" class="h-full bg-cyan-400 transition-all duration-75" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode Indicator Badge -->
+        <div class="absolute top-6 right-6 z-10">
+          <span id="simModeBadge" class="bg-indigo-600/80 backdrop-blur border border-indigo-400/30 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md">
+            Earth Motion Engine
+          </span>
+        </div>
+
+        <!-- Simulation Canvas -->
+        <canvas id="simCanvas" class="w-full h-[360px] sm:h-[420px] cursor-crosshair shadow-inner"></canvas>
+
+        <!-- Canvas Controls Bar -->
+        <div class="w-full flex flex-wrap items-center justify-between gap-2.5 mt-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Launch / Play Button -->
+            <button id="launchBtn" onclick="launchSimulation()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center space-x-2 text-xs sm:text-sm">
+              <i id="launchIcon" class="fa-solid fa-play"></i>
+              <span id="launchBtnText">Launch / Drop</span>
+            </button>
+
+            <!-- Pause / Resume Button -->
+            <button id="pauseBtn" onclick="togglePause()" class="bg-slate-700/80 hover:bg-slate-600 text-white font-semibold px-3 py-2.5 rounded-xl border border-slate-600 transition active:scale-95 text-xs flex items-center space-x-1" title="Pause / Play (P or Space)">
+              <i id="pauseIcon" class="fa-solid fa-pause"></i>
+              <span id="pauseBtnText" class="hidden sm:inline">Pause</span>
+            </button>
+
+            <!-- Step Forward Button (+0.05s) -->
+            <button id="stepBtn" onclick="stepForward()" class="bg-slate-700/80 hover:bg-slate-600 text-amber-300 font-semibold px-3 py-2.5 rounded-xl border border-slate-600 transition active:scale-95 text-xs flex items-center space-x-1" title="Step Forward +0.05s">
+              <i class="fa-solid fa-forward-step"></i>
+              <span class="hidden sm:inline">Step</span>
+            </button>
+
+            <!-- Reset Button -->
+            <button onclick="resetSim()" class="bg-slate-700/80 hover:bg-slate-600 text-white font-semibold p-2.5 rounded-xl border border-slate-600 transition active:scale-95 text-xs" title="Reset (R)">
+              <i class="fa-solid fa-rotate-right"></i>
+            </button>
+          </div>
+
+          <!-- Slow-Motion Speed Presets -->
+          <div class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-semibold">
+            <span class="text-slate-400 px-1.5 hidden sm:inline">Speed:</span>
+            <button onclick="setSimSpeed(0.1)" class="speed-btn px-2 py-1 rounded-lg hover:bg-slate-700 transition text-slate-300" data-speed="0.1">0.1x</button>
+            <button onclick="setSimSpeed(0.5)" class="speed-btn px-2 py-1 rounded-lg hover:bg-slate-700 transition text-slate-300" data-speed="0.5">0.5x</button>
+            <button onclick="setSimSpeed(1.0)" class="speed-btn px-2 py-1 rounded-lg bg-purple-600 text-white transition" data-speed="1.0">1.0x</button>
+            <button onclick="setSimSpeed(2.0)" class="speed-btn px-2 py-1 rounded-lg hover:bg-slate-700 transition text-slate-300" data-speed="2.0">2.0x</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulation Interactive Sliders Card -->
+      <div class="glass-card p-4 rounded-2xl space-y-4">
+        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+          <span><i class="fa-solid fa-sliders text-purple-400 mr-2"></i> Experiment Parameters</span>
+          <span class="text-[11px] font-normal text-slate-400">Adjust & Live Test</span>
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Initial Velocity Slider -->
+          <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex flex-col justify-between">
+            <div class="flex justify-between text-xs mb-1">
+              <label class="text-slate-300 font-semibold">Initial Vel (v<sub>0</sub>)</label>
+              <span id="v0Val" class="text-cyan-400 font-mono font-bold">0 m/s</span>
+            </div>
+            <input type="range" id="v0Slider" min="-30" max="50" value="0" step="1" class="w-full cursor-pointer" oninput="updateSimParameters()">
+            <div class="text-[10px] text-slate-400 mt-1.5 flex justify-between font-mono">
+              <span>-30 (Down)</span>
+              <span>0</span>
+              <span>+50 (Up)</span>
+            </div>
+          </div>
+
+          <!-- Initial Height Slider -->
+          <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex flex-col justify-between">
+            <div class="flex justify-between text-xs mb-1">
+              <label class="text-slate-300 font-semibold">Initial Height (y<sub>0</sub>)</label>
+              <span id="h0Val" class="text-emerald-400 font-mono font-bold">45 m</span>
+            </div>
+            <input type="range" id="h0Slider" min="0" max="100" value="45" step="5" class="w-full cursor-pointer" oninput="updateSimParameters()">
+            <div class="text-[10px] text-slate-400 mt-1.5 flex justify-between font-mono">
+              <span>0 m (Ground)</span>
+              <span>50 m</span>
+              <span>100 m</span>
+            </div>
+          </div>
+
+          <!-- Gravity Slider & Planet Selector -->
+          <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex flex-col justify-between">
+            <div class="flex justify-between text-xs mb-1">
+              <label class="text-slate-300 font-semibold">Gravity (g)</label>
+              <span id="gVal" class="text-purple-300 font-mono font-bold">9.81 m/s²</span>
+            </div>
+            <div class="space-y-1.5">
+              <input type="range" id="gSlider" min="1.0" max="25.0" value="9.81" step="0.1" class="w-full cursor-pointer" oninput="onCustomGravityChange()">
+              <select id="planetPresetSelect" onchange="applyPlanetPreset()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-xs text-purple-200 font-medium focus:ring-1 focus:ring-purple-400 outline-none">
+                <option value="9.81">Earth (9.81 m/s²)</option>
+                <option value="1.62">Moon (1.62 m/s²)</option>
+                <option value="3.71">Mars (3.71 m/s²)</option>
+                <option value="24.79">Jupiter (24.79 m/s²)</option>
+                <option value="custom">Custom Slider</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- RIGHT COLUMN: GRADED EXERCISES & FORMULAS (5 Cols) -->
+    <section class="lg:col-span-5 flex flex-col space-y-4">
+
+      <!-- Navigation Tabs for Exercise Modes -->
+      <div class="flex p-1 bg-slate-900/80 rounded-xl border border-slate-800">
+        <button id="tabMode1" onclick="switchExerciseMode(1)" class="flex-1 py-2 rounded-lg text-xs font-bold transition bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow">
+          <i class="fa-solid fa-bolt mr-1"></i> Mode 1: Motion Quiz
+        </button>
+        <button id="tabMode2" onclick="switchExerciseMode(2)" class="flex-1 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-planet-ring-diamond mr-1"></i> Mode 2: Mystery Planet
+        </button>
+      </div>
+
+      <!-- GRADED QUESTION CARD -->
+      <div id="exerciseCard" class="glass-card p-5 rounded-2xl flex-1 flex flex-col justify-between relative border-l-4 border-l-purple-500 shadow-xl">
+        
+        <!-- Question Header Info -->
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <span id="questionCategory" class="text-[11px] uppercase font-extrabold tracking-wider px-2.5 py-1 rounded-md bg-purple-900/60 text-purple-300 border border-purple-500/30">
+              Velocity Calculation
+            </span>
+            <span id="difficultyBadge" class="text-[11px] font-bold text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded border border-amber-500/20">
+              Graded Exercise
+            </span>
+          </div>
+
+          <!-- Dynamic Question Text -->
+          <h2 id="questionPrompt" class="text-base sm:text-lg font-bold text-white leading-snug mb-4">
+            Loading problem...
+          </h2>
+
+          <!-- Visual Parameter Context Box -->
+          <div id="paramContextBox" class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 grid grid-cols-2 gap-2 text-xs font-mono mb-4">
+            <!-- Parameter badges inserted dynamically -->
+          </div>
+
+          <!-- Multiple Choice Options Grid -->
+          <div id="optionsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <!-- Buttons dynamically generated -->
+          </div>
+        </div>
+
+        <!-- Question Footer & Actions -->
+        <div>
+          <!-- Immediate Feedback Result Banner -->
+          <div id="feedbackBanner" class="hidden p-3 rounded-xl mb-3 text-xs font-semibold flex items-center justify-between animate-fade-in">
+            <div class="flex items-center space-x-2">
+              <i id="feedbackIcon" class="text-base"></i>
+              <span id="feedbackText">---</span>
+            </div>
+            <button id="explainToggleBtn" onclick="toggleExplanation()" class="underline text-[11px] opacity-80 hover:opacity-100">
+              Show Solution
+            </button>
+          </div>
+
+          <!-- Step-by-Step Solution Breakdown (Collapsible) -->
+          <div id="explanationBox" class="hidden bg-slate-900/95 border border-slate-700/80 p-3 rounded-xl text-xs space-y-1 mb-3 text-purple-100 font-mono">
+            <div class="font-bold text-amber-300 text-[11px] uppercase tracking-wide border-b border-slate-800 pb-1 mb-1">
+              <i class="fa-solid fa-lightbulb mr-1"></i> Physics Solution Step-by-Step
+            </div>
+            <p id="explanationText" class="leading-relaxed">...</p>
+          </div>
+
+          <!-- Bottom Action Buttons -->
+          <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+            <div class="text-[11px] text-slate-400 flex items-center space-x-1">
+              <i class="fa-solid fa-microphone text-pink-400"></i>
+              <span>Say answer or option #</span>
+            </div>
+
+            <button id="nextQuestionBtn" onclick="generateNewQuestion()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md flex items-center space-x-1.5 active:scale-95">
+              <span>Next Problem</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHYSICS FORMULA QUICK REFERENCE CHEAT-SHEET -->
+      <div class="glass-card p-4 rounded-2xl space-y-2">
+        <h3 class="text-xs font-extrabold text-slate-300 uppercase tracking-wider flex items-center">
+          <i class="fa-solid fa-book-bookmark text-pink-400 mr-2"></i> Free-Fall Kinematics Guide
+        </h3>
+        <div class="grid grid-cols-2 gap-2 text-[11px] font-mono text-purple-200">
+          <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block text-[10px]">Instantaneous Velocity</span>
+            <span class="text-cyan-300 font-bold">v(t) = v<sub>0</sub> - g · t</span>
+          </div>
+          <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block text-[10px]">Position / Altitude</span>
+            <span class="text-emerald-300 font-bold">y(t) = y<sub>0</sub> + v<sub>0</sub>t - ½gt²</span>
+          </div>
+          <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block text-[10px]">Velocity & Altitude</span>
+            <span class="text-amber-300 font-bold">v² = v<sub>0</sub>² - 2g(Δy)</span>
+          </div>
+          <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block text-[10px]">Gravity Acceleration</span>
+            <span class="text-pink-300 font-bold">g = 2h / t²</span> (for v<sub>0</sub>=0)
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- KEYBOARD SHORTCUTS HINT FOOTER -->
+  <footer class="max-w-7xl mx-auto w-full px-4 mt-4 text-center text-slate-500 text-xs">
+    <div class="flex flex-wrap justify-center items-center gap-4">
+      <span><kbd class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">Space</kbd> Pause/Play</span>
+      <span><kbd class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">R</kbd> Reset Sim</span>
+      <span><kbd class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">Up/Down</kbd> Adjust v₀</span>
+      <span><kbd class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">1-4</kbd> Select Answer</span>
+    </div>
+  </footer>
+
+  <!-- MAIN SCRIPT ENGINE -->
+  <script>
+    /* ===================================================================
+       1. WEB AUDIO SYNTHESIZER (PROCEDURAL SOUND EFFECTS)
+       =================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playCorrect() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        
+        // Upbeat chord sequence (C5, E5, G5, C6)
+        const freqs = [523.25, 659.25, 783.99, 1046.50];
+        freqs.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + i * 0.07);
+
+          gain.gain.setValueAtTime(0.15, now + i * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.35);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now + i * 0.07);
+          osc.stop(now + i * 0.07 + 0.35);
+        });
+      }
+
+      playWrong() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.35);
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+
+      playLaunch() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.exponentialRampToValueAtTime(480, now + 0.25);
+
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.28);
+      }
+
+      playImpact() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(25, now + 0.22);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.22);
+      }
+
+      playTap() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(650, now);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.05);
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    function toggleMute() {
+      sound.muted = !sound.muted;
+      const icon = document.getElementById('audioIcon');
+      if (sound.muted) {
+        icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+      } else {
+        icon.className = 'fa-solid fa-volume-high text-amber-300';
+        sound.playTap();
+      }
+    }
+
+
+    /* ===================================================================
+       2. REBUILT ENHANCED PHYSICS SIMULATION CANVAS ENGINE
+       =================================================================== */
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Robust Physics State Model
+    let simState = {
+      running: false,
+      paused: false,
+      time: 0,            // current simulation elapsed time in seconds
+      v0: 0,              // initial launch velocity m/s (positive = up, negative = down)
+      y0: 45,             // initial height m
+      g: 9.81,            // gravity acceleration m/s²
+      currentY: 45,       // current altitude m
+      currentV: 0,        // current velocity m/s
+      maxHeight: 45,      // peak altitude reached during current trajectory
+      trail: [],          // array of historical position points for drawing trail
+      speedFactor: 1.0,   // playback speed multiplier (0.1x to 2.0x)
+      animFrameId: null,
+      lastTimestamp: null
+    };
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawSim();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function updateSimParameters() {
+      if (!simState.running) {
+        simState.v0 = parseFloat(document.getElementById('v0Slider').value);
+        simState.y0 = parseFloat(document.getElementById('h0Slider').value);
+        simState.g = parseFloat(document.getElementById('gSlider').value);
+        
+        simState.currentY = simState.y0;
+        simState.currentV = simState.v0;
+        
+        // Calculate peak altitude theoretically: y_max = y0 + v0^2 / (2g) if v0 > 0
+        if (simState.v0 > 0) {
+          simState.maxHeight = simState.y0 + (simState.v0 * simState.v0) / (2 * simState.g);
+        } else {
+          simState.maxHeight = simState.y0;
+        }
+
+        document.getElementById('v0Val').innerText = `${simState.v0 > 0 ? '+' : ''}${simState.v0} m/s`;
+        document.getElementById('h0Val').innerText = `${simState.y0} m`;
+        document.getElementById('gVal').innerText = `${simState.g.toFixed(2)} m/s²`;
+        
+        document.getElementById('simStatusTag').innerText = "Ready";
+        document.getElementById('simStatusTag').className = "text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 uppercase font-bold";
+
+        updateDiagnostics();
+        drawSim();
+      }
+    }
+
+    function onCustomGravityChange() {
+      document.getElementById('planetPresetSelect').value = "custom";
+      updateSimParameters();
+    }
+
+    function applyPlanetPreset() {
+      const val = document.getElementById('planetPresetSelect').value;
+      if (val !== 'custom') {
+        const gVal = parseFloat(val);
+        document.getElementById('gSlider').value = gVal;
+        simState.g = gVal;
+      }
+      updateSimParameters();
+    }
+
+    function launchSimulation() {
+      sound.init();
+      sound.playLaunch();
+
+      simState.v0 = parseFloat(document.getElementById('v0Slider').value);
+      simState.y0 = parseFloat(document.getElementById('h0Slider').value);
+      simState.g = parseFloat(document.getElementById('gSlider').value);
+
+      simState.time = 0;
+      simState.currentY = simState.y0;
+      simState.currentV = simState.v0;
+      simState.maxHeight = simState.v0 > 0 ? simState.y0 + (simState.v0 * simState.v0) / (2 * simState.g) : simState.y0;
+      simState.trail = [];
+      simState.running = true;
+      simState.paused = false;
+      simState.lastTimestamp = performance.now();
+
+      // UI state updates
+      document.getElementById('launchIcon').className = 'fa-solid fa-rotate-right';
+      document.getElementById('launchBtnText').innerText = 'Restart Launch';
+      document.getElementById('pauseIcon').className = 'fa-solid fa-pause';
+      document.getElementById('pauseBtnText').innerText = 'Pause';
+      
+      document.getElementById('simStatusTag').innerText = "In Motion";
+      document.getElementById('simStatusTag').className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 uppercase font-bold border border-emerald-500/30";
+
+      if (simState.animFrameId) cancelAnimationFrame(simState.animFrameId);
+      simState.animFrameId = requestAnimationFrame(stepSim);
+    }
+
+    function togglePause() {
+      if (!simState.running && simState.time === 0) {
+        launchSimulation();
+        return;
+      }
+      sound.playTap();
+      simState.paused = !simState.paused;
+
+      const pauseIcon = document.getElementById('pauseIcon');
+      const pauseText = document.getElementById('pauseBtnText');
+      const statusTag = document.getElementById('simStatusTag');
+
+      if (simState.paused) {
+        pauseIcon.className = 'fa-solid fa-play';
+        pauseText.innerText = 'Resume';
+        statusTag.innerText = "Paused";
+        statusTag.className = "text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 uppercase font-bold border border-amber-500/30";
+      } else {
+        pauseIcon.className = 'fa-solid fa-pause';
+        pauseText.innerText = 'Pause';
+        statusTag.innerText = "In Motion";
+        statusTag.className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 uppercase font-bold border border-emerald-500/30";
+        simState.lastTimestamp = performance.now();
+        simState.animFrameId = requestAnimationFrame(stepSim);
+      }
+    }
+
+    function stepForward() {
+      sound.playTap();
+      if (!simState.running) {
+        simState.running = true;
+        simState.time = 0;
+      }
+      simState.paused = true;
+      document.getElementById('pauseIcon').className = 'fa-solid fa-play';
+      document.getElementById('pauseBtnText').innerText = 'Resume';
+      document.getElementById('simStatusTag').innerText = "Step Mode";
+
+      // Advance physics by fixed small delta
+      advancePhysics(0.05);
+      updateDiagnostics();
+      drawSim();
+    }
+
+    function resetSim() {
+      sound.playTap();
+      simState.running = false;
+      simState.paused = false;
+      simState.time = 0;
+
+      document.getElementById('launchIcon').className = 'fa-solid fa-play';
+      document.getElementById('launchBtnText').innerText = 'Launch / Drop';
+      document.getElementById('pauseIcon').className = 'fa-solid fa-pause';
+      document.getElementById('pauseBtnText').innerText = 'Pause';
+
+      if (simState.animFrameId) cancelAnimationFrame(simState.animFrameId);
+      updateSimParameters();
+    }
+
+    function setSimSpeed(spd) {
+      sound.playTap();
+      simState.speedFactor = spd;
+      document.querySelectorAll('.speed-btn').forEach(btn => {
+        if (parseFloat(btn.dataset.speed) === spd) {
+          btn.className = 'speed-btn px-2 py-1 rounded-lg bg-purple-600 text-white transition';
+        } else {
+          btn.className = 'speed-btn px-2 py-1 rounded-lg hover:bg-slate-700 transition text-slate-300';
+        }
+      });
+    }
+
+    // Direct Physics Calculation Step
+    function advancePhysics(dtSeconds) {
+      simState.time += dtSeconds;
+
+      // Kinematic Equations for Vertical Motion:
+      // y(t) = y0 + v0*t - 0.5*g*t^2
+      // v(t) = v0 - g*t
+      const t = simState.time;
+      simState.currentY = simState.y0 + (simState.v0 * t) - (0.5 * simState.g * t * t);
+      simState.currentV = simState.v0 - (simState.g * t);
+
+      if (simState.currentY > simState.maxHeight) {
+        simState.maxHeight = simState.currentY;
+      }
+
+      // Record trajectory trail sample
+      simState.trail.push({ t: t, y: simState.currentY, v: simState.currentV });
+      if (simState.trail.length > 120) simState.trail.shift();
+
+      // Ground Collision Detection
+      if (simState.currentY <= 0) {
+        simState.currentY = 0;
+        // Impact velocity formula right at y = 0
+        const vImpact = -Math.sqrt(Math.max(0, (simState.v0 * simState.v0) + (2 * simState.g * simState.y0)));
+        simState.currentV = vImpact;
+        simState.running = false;
+        
+        sound.playImpact();
+
+        document.getElementById('simStatusTag').innerText = "Impact!";
+        document.getElementById('simStatusTag').className = "text-[10px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-400 uppercase font-bold border border-rose-500/30";
+      }
+    }
+
+    // Animation Render Loop
+    function stepSim(timestamp) {
+      if (!simState.running || simState.paused) return;
+
+      const deltaMs = timestamp - simState.lastTimestamp;
+      simState.lastTimestamp = timestamp;
+
+      // Convert delta time to seconds and scale by user speed multiplier
+      let dt = (deltaMs / 1000) * simState.speedFactor;
+      // Cap max frame delta to avoid physics explosions when switching tabs
+      dt = Math.min(dt, 0.08);
+
+      advancePhysics(dt);
+      updateDiagnostics();
+      drawSim();
+
+      if (simState.running) {
+        simState.animFrameId = requestAnimationFrame(stepSim);
+      }
+    }
+
+    function updateDiagnostics() {
+      document.getElementById('diagTime').innerText = `${simState.time.toFixed(2)} s`;
+      document.getElementById('diagHeight').innerText = `${Math.max(0, simState.currentY).toFixed(2)} m`;
+      document.getElementById('diagVel').innerText = `${simState.currentV.toFixed(2)} m/s`;
+      document.getElementById('diagPeak').innerText = `${simState.maxHeight.toFixed(2)} m`;
+      document.getElementById('diagGrav').innerText = `${simState.g.toFixed(2)} m/s²`;
+
+      // Update HUD Velocity Vector Bar
+      const vGaugeUp = document.getElementById('velGaugeUp');
+      const vGaugeDown = document.getElementById('velGaugeDown');
+      const vLabel = document.getElementById('velDirLabel');
+
+      const absV = Math.abs(simState.currentV);
+      const maxRange = 60; // Max expected velocity scale
+      const pct = Math.min(100, (absV / maxRange) * 100);
+
+      if (Math.abs(simState.currentV) < 0.1) {
+        vGaugeUp.style.width = '0%';
+        vGaugeDown.style.width = '0%';
+        vLabel.innerText = "Rest";
+        vLabel.className = "font-bold text-slate-300";
+      } else if (simState.currentV > 0) {
+        vGaugeUp.style.width = `${pct}%`;
+        vGaugeDown.style.width = '0%';
+        vLabel.innerText = "Upward ↑";
+        vLabel.className = "font-bold text-cyan-400";
+      } else {
+        vGaugeUp.style.width = '0%';
+        vGaugeDown.style.width = `${pct}%`;
+        vLabel.innerText = "Downward ↓";
+        vLabel.className = "font-bold text-rose-400";
+      }
+    }
+
+    // Precise Canvas Graphic Rendering
+    function drawSim() {
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Scale height dynamically based on launch + peak altitude (min scale 100m, max 250m)
+      const maxMeters = Math.max(100, Math.min(250, simState.maxHeight * 1.2));
+      const paddingBottom = 45;
+      const paddingTop = 35;
+      const usableHeight = height - paddingBottom - paddingTop;
+
+      const meterToPx = (m) => height - paddingBottom - (m / maxMeters * usableHeight);
+
+      // 1. Altitude Ruler Grid Lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+      ctx.font = '10px monospace';
+
+      const stepMeters = maxMeters > 150 ? 25 : (maxMeters > 80 ? 10 : 5);
+      for (let m = 0; m <= maxMeters; m += stepMeters) {
+        const yPx = meterToPx(m);
+        ctx.beginPath();
+        ctx.moveTo(55, yPx);
+        ctx.lineTo(width - 20, yPx);
+        ctx.stroke();
+
+        // Tick marks on ruler
+        ctx.beginPath();
+        ctx.moveTo(48, yPx);
+        ctx.lineTo(55, yPx);
+        ctx.stroke();
+
+        ctx.fillText(`${m}m`, 16, yPx + 3);
+      }
+
+      // Vertical Ruler Shaft
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(55, paddingTop);
+      ctx.lineTo(55, height - paddingBottom);
+      ctx.stroke();
+
+      // 2. Ground Terrain
+      const groundY = meterToPx(0);
+      const groundGrad = ctx.createLinearGradient(0, groundY, 0, height);
+      groundGrad.addColorStop(0, '#1e293b');
+      groundGrad.addColorStop(1, '#0f172a');
+
+      ctx.fillStyle = groundGrad;
+      ctx.fillRect(0, groundY, width, height - groundY);
+
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(width, groundY);
+      ctx.stroke();
+
+      // 3. Launch Tower / Structure (if y0 > 0)
+      const objectX = width * 0.45;
+      if (simState.y0 > 0) {
+        const platformY = meterToPx(simState.y0);
+        
+        // Structure Pillar
+        ctx.fillStyle = 'rgba(51, 65, 85, 0.7)';
+        ctx.fillRect(objectX - 35, platformY, 40, groundY - platformY);
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(objectX - 35, platformY, 40, groundY - platformY);
+
+        // Platform Ledge
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(objectX - 42, platformY - 4, 54, 4);
+      }
+
+      // 4. Trajectory Path Trail
+      if (simState.trail.length > 1) {
+        ctx.beginPath();
+        for (let i = 0; i < simState.trail.length; i++) {
+          const pt = simState.trail[i];
+          const pxY = meterToPx(Math.max(0, pt.y));
+          if (i === 0) ctx.moveTo(objectX, pxY);
+          else ctx.lineTo(objectX, pxY);
+        }
+        ctx.strokeStyle = 'rgba(192, 132, 252, 0.4)';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Time pulse dots along trajectory
+        simState.trail.forEach((pt, idx) => {
+          if (idx % 4 === 0) {
+            const pxY = meterToPx(Math.max(0, pt.y));
+            ctx.beginPath();
+            ctx.arc(objectX, pxY, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(236, 72, 153, ${0.2 + (idx / simState.trail.length) * 0.7})`;
+            ctx.fill();
+          }
+        });
+      }
+
+      // 5. Apex / Max Height Marker Line
+      if (simState.maxHeight > simState.y0 || simState.v0 > 0) {
+        const peakY = meterToPx(simState.maxHeight);
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(objectX - 60, peakY);
+        ctx.lineTo(objectX + 90, peakY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText(`Peak Apex: ${simState.maxHeight.toFixed(1)}m`, objectX + 15, peakY - 5);
+      }
+
+      // 6. Falling/Rising Glowing Object Sphere
+      const currentPxY = meterToPx(Math.max(0, simState.currentY));
+      const radius = 13;
+
+      // Outer Radial Glow
+      const glow = ctx.createRadialGradient(objectX, currentPxY, 2, objectX, currentPxY, radius * 2.2);
+      glow.addColorStop(0, '#c084fc');
+      glow.addColorStop(0.5, '#9333ea');
+      glow.addColorStop(1, 'rgba(147, 51, 234, 0)');
+
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(objectX, currentPxY, radius * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core Sphere
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.arc(objectX, currentPxY, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Inner Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.beginPath();
+      ctx.arc(objectX - 3, currentPxY - 3, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 7. Dynamic Real-Time Velocity Arrow Vector
+      if (Math.abs(simState.currentV) > 0.1) {
+        const arrowLength = Math.min(80, Math.max(18, Math.abs(simState.currentV) * 1.4));
+        const direction = simState.currentV > 0 ? -1 : 1; // Canvas Y coordinates inverted
+        const targetY = currentPxY + (arrowLength * direction);
+
+        const vectorColor = simState.currentV > 0 ? '#38bdf8' : '#f43f5e';
+        ctx.strokeStyle = vectorColor;
+        ctx.fillStyle = vectorColor;
+        ctx.lineWidth = 3;
+
+        // Shaft
+        ctx.beginPath();
+        ctx.moveTo(objectX + 24, currentPxY);
+        ctx.lineTo(objectX + 24, targetY);
+        ctx.stroke();
+
+        // Arrow Head
+        ctx.beginPath();
+        ctx.moveTo(objectX + 24, targetY);
+        ctx.lineTo(objectX + 18, targetY - (9 * direction));
+        ctx.lineTo(objectX + 30, targetY - (9 * direction));
+        ctx.closePath();
+        ctx.fill();
+
+        // Velocity Value Tag
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(`v = ${simState.currentV.toFixed(1)} m/s`, objectX + 34, currentPxY + (arrowLength * 0.5 * direction));
+      }
+    }
+
+    // Init canvas
+    resizeCanvas();
+
+
+    /* ===================================================================
+       3. GRADED EXERCISE & QUIZ ENGINE
+       =================================================================== */
+    let currentMode = 1; // 1: Velocity/Motion Quiz, 2: Mystery Planet Challenge
+    let currentQuestion = null;
+    let score = 0;
+    let streak = 0;
+    let answeredCurrent = false;
+
+    // Celestial body database for Mystery Planet Mode
+    const PLANET_DB = [
+      { name: "Moon", g: 1.62, color: "#94a3b8", desc: "Low gravity Earth satellite" },
+      { name: "Mars", g: 3.71, color: "#f97316", desc: "The Red Planet" },
+      { name: "Mercury", g: 3.70, color: "#a1a1aa", desc: "Innermost rocky world" },
+      { name: "Venus", g: 8.87, color: "#fde047", desc: "Dense atmospheric terrestrial world" },
+      { name: "Earth", g: 9.81, color: "#38bdf8", desc: "Home world" },
+      { name: "Jupiter", g: 24.79, color: "#eab308", desc: "Gas giant beast" },
+      { name: "Neptune", g: 11.15, color: "#3b82f6", desc: "Distant blue ice giant" }
+    ];
+
+    function switchExerciseMode(mode) {
+      sound.playTap();
+      currentMode = mode;
+      document.getElementById('tabMode1').className = mode === 1 
+        ? 'flex-1 py-2 rounded-lg text-xs font-bold transition bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow'
+        : 'flex-1 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition';
+      
+      document.getElementById('tabMode2').className = mode === 2 
+        ? 'flex-1 py-2 rounded-lg text-xs font-bold transition bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow'
+        : 'flex-1 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition';
+
+      document.getElementById('questionCategory').innerText = mode === 1 ? "Kinematics & Velocity" : "Mystery Planet Gravity";
+      document.getElementById('simModeBadge').innerText = mode === 1 ? "Earth Motion Engine" : "Alien World Simulation";
+
+      generateNewQuestion();
+    }
+
+    function generateNewQuestion() {
+      sound.playTap();
+      answeredCurrent = false;
+      document.getElementById('feedbackBanner').classList.add('hidden');
+      document.getElementById('explanationBox').classList.add('hidden');
+
+      if (currentMode === 1) {
+        generateVelocityMotionQuestion();
+      } else {
+        generateMysteryPlanetQuestion();
+      }
+    }
+
+    // MODE 1: Free-fall velocity & time questions
+    function generateVelocityMotionQuestion() {
+      const qTypes = ['velocity_at_t', 'peak_height', 'landing_speed', 'time_to_ground'];
+      const type = qTypes[Math.floor(Math.random() * qTypes.length)];
+
+      const g = 9.81;
+      let prompt = "";
+      let params = {};
+      let correctAnswer = 0;
+      let unit = "";
+      let simConfig = { v0: 0, y0: 45, g: 9.81 };
+      let stepByStep = "";
+
+      if (type === 'velocity_at_t') {
+        const isUpward = Math.random() > 0.3;
+        const v0 = isUpward ? (Math.floor(Math.random() * 4) + 1) * 10 : 0; // 0 or +10..+40
+        const t = Math.floor(Math.random() * 3) + 1; // 1, 2, 3 s
+        simConfig.v0 = v0;
+        simConfig.y0 = 80;
+
+        correctAnswer = v0 - (g * t);
+        unit = "m/s";
+
+        prompt = v0 === 0 
+          ? `An apple is dropped from rest (v<sub>0</sub> = 0 m/s). What is its instantaneous velocity after t = ${t} seconds?`
+          : `A ball is thrown vertically upward with v<sub>0</sub> = +${v0} m/s. What is its velocity after t = ${t} seconds?`;
+
+        params = { "Initial Velocity (v₀)": `${v0} m/s`, "Time (t)": `${t} s`, "Gravity (g)": `9.81 m/s²` };
+        stepByStep = `Use v(t) = v<sub>0</sub> - g · t. <br> v = ${v0} - (9.81 × ${t}) = ${correctAnswer.toFixed(2)} m/s.`;
+
+      } else if (type === 'peak_height') {
+        const v0 = (Math.floor(Math.random() * 4) + 2) * 10; // 20, 30, 40, 50 m/s
+        simConfig.v0 = v0;
+        simConfig.y0 = 0;
+
+        const maxH = (v0 * v0) / (2 * g);
+        correctAnswer = maxH;
+        unit = "m";
+
+        prompt = `A projectile is launched vertically upward from ground level (y<sub>0</sub> = 0) at v<sub>0</sub> = ${v0} m/s. What maximum peak altitude height will it reach?`;
+        params = { "Initial Velocity (v₀)": `${v0} m/s`, "Launch Height": `0 m`, "Gravity (g)": `9.81 m/s²` };
+        stepByStep = `At apex peak, velocity v = 0. <br> Using v² = v<sub>0</sub>² - 2g(Δy) ⟹ 0 = ${v0}² - 2(9.81)y<sub>max</sub> <br> y<sub>max</sub> = ${v0 * v0} / 19.62 = ${correctAnswer.toFixed(2)} m.`;
+
+      } else if (type === 'landing_speed') {
+        const y0 = (Math.floor(Math.random() * 4) + 2) * 20; // 40, 60, 80, 100 m
+        simConfig.v0 = 0;
+        simConfig.y0 = y0;
+
+        const vImpact = -Math.sqrt(2 * g * y0);
+        correctAnswer = vImpact;
+        unit = "m/s";
+
+        prompt = `An object is dropped from rest (v<sub>0</sub> = 0 m/s) from height y<sub>0</sub> = ${y0} meters. What is its impact velocity right before touching the ground?`;
+        params = { "Height (y₀)": `${y0} m`, "Initial Velocity": `0 m/s`, "Gravity (g)": `9.81 m/s²` };
+        stepByStep = `Using v² = v<sub>0</sub>² - 2g(Δy) = 0 - 2(9.81)(-${y0}) = ${(2 * g * y0).toFixed(2)}. <br> v = -√(${(2 * g * y0).toFixed(2)}) = ${correctAnswer.toFixed(2)} m/s (downward).`;
+
+      } else { // time_to_ground
+        const y0 = (Math.floor(Math.random() * 3) + 2) * 20; // 40, 60, 80
+        simConfig.v0 = 0;
+        simConfig.y0 = y0;
+
+        const tFall = Math.sqrt((2 * y0) / g);
+        correctAnswer = tFall;
+        unit = "s";
+
+        prompt = `How long will it take for a payload dropped from rest at altitude y<sub>0</sub> = ${y0} m to fall to the ground?`;
+        params = { "Height (y₀)": `${y0} m`, "Initial Velocity": `0 m/s`, "Gravity (g)": `9.81 m/s²` };
+        stepByStep = `Using y(t) = y<sub>0</sub> - ½gt² ⟹ 0 = ${y0} - 4.905t² <br> t = √(${y0} / 4.905) = ${correctAnswer.toFixed(2)} seconds.`;
+      }
+
+      // Sync simulation preset matching question context
+      document.getElementById('v0Slider').value = simConfig.v0;
+      document.getElementById('h0Slider').value = simConfig.y0;
+      document.getElementById('gSlider').value = simConfig.g;
+      document.getElementById('planetPresetSelect').value = "9.81";
+      updateSimParameters();
+
+      currentQuestion = {
+        prompt: prompt,
+        params: params,
+        correctValue: correctAnswer,
+        unit: unit,
+        stepByStep: stepByStep
+      };
+
+      renderQuestionCard(generateOptions(correctAnswer, unit));
+    }
+
+    // MODE 2: Mystery Planet Gravitational Acceleration
+    function generateMysteryPlanetQuestion() {
+      const planet = PLANET_DB[Math.floor(Math.random() * PLANET_DB.length)];
+      const y0 = (Math.floor(Math.random() * 4) + 2) * 15; // 30, 45, 60, 75 m
+      const tFall = Math.sqrt((2 * y0) / planet.g);
+
+      // Configure visual sim matching planet
+      document.getElementById('v0Slider').value = 0;
+      document.getElementById('h0Slider').value = y0;
+      document.getElementById('gSlider').value = planet.g;
+      document.getElementById('planetPresetSelect').value = "custom";
+      updateSimParameters();
+
+      const prompt = `An astronaut drops a probe from rest (v<sub>0</sub> = 0 m/s) on an UNKNOWN PLANET from height y<sub>0</sub> = ${y0} m. It takes t = ${tFall.toFixed(2)} s to land. Calculate g<sub>planet</sub> and identify the celestial world!`;
+
+      const params = {
+        "Drop Height (y₀)": `${y0} m`,
+        "Fall Time (t)": `${tFall.toFixed(2)} s`,
+        "Initial Velocity (v₀)": `0 m/s`
+      };
+
+      const stepByStep = `Formula: y = ½ g t² ⟹ g = 2y / t². <br> g = (2 × ${y0}) / (${tFall.toFixed(2)})² = ${2 * y0} / ${(tFall * tFall).toFixed(2)} = ${planet.g.toFixed(2)} m/s². <br> Celestial Match: <strong>${planet.name}</strong> (${planet.desc}).`;
+
+      currentQuestion = {
+        prompt: prompt,
+        params: params,
+        correctValue: planet.g,
+        unit: `m/s² (${planet.name})`,
+        planetName: planet.name,
+        stepByStep: stepByStep
+      };
+
+      // Generate planet choice list
+      let options = [
+        { text: `${planet.g.toFixed(2)} m/s² (${planet.name})`, isCorrect: true, val: planet.g }
+      ];
+
+      const distractors = PLANET_DB.filter(p => p.name !== planet.name);
+      shuffleArray(distractors);
+      for (let i = 0; i < 3; i++) {
+        options.push({
+          text: `${distractors[i].g.toFixed(2)} m/s² (${distractors[i].name})`,
+          isCorrect: false,
+          val: distractors[i].g
+        });
+      }
+      shuffleArray(options);
+
+      renderQuestionCard(options);
+    }
+
+    function generateOptions(correctVal, unit) {
+      let options = [
+        { text: `${correctVal.toFixed(2)} ${unit}`, isCorrect: true, val: correctVal }
+      ];
+
+      const offsets = [-9.81, 9.81, 4.9, -4.9, correctVal * 0.5, correctVal * 1.5];
+      let usedVals = new Set([correctVal.toFixed(2)]);
+
+      for (let off of offsets) {
+        if (options.length >= 4) break;
+        let dist = correctVal + off;
+        if (Math.abs(dist - correctVal) < 0.1) dist += 3.5;
+        let str = dist.toFixed(2);
+        if (!usedVals.has(str)) {
+          usedVals.add(str);
+          options.push({ text: `${str} ${unit}`, isCorrect: false, val: dist });
+        }
+      }
+
+      while (options.length < 4) {
+        let randVal = (correctVal + (Math.random() * 20 - 10)).toFixed(2);
+        if (!usedVals.has(randVal)) {
+          usedVals.add(randVal);
+          options.push({ text: `${randVal} ${unit}`, isCorrect: false, val: parseFloat(randVal) });
+        }
+      }
+
+      shuffleArray(options);
+      return options;
+    }
+
+    function renderQuestionCard(options) {
+      document.getElementById('questionPrompt').innerHTML = currentQuestion.prompt;
+
+      const pBox = document.getElementById('paramContextBox');
+      pBox.innerHTML = '';
+      for (let [k, v] of Object.entries(currentQuestion.params)) {
+        pBox.innerHTML += `<div><span class="text-slate-400 block">${k}</span><span class="text-pink-300 font-bold">${v}</span></div>`;
+      }
+
+      const optContainer = document.getElementById('optionsContainer');
+      optContainer.innerHTML = '';
+
+      options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'glass-card-interactive p-3 rounded-xl text-left text-xs font-bold text-slate-200 hover:text-white flex items-center justify-between group cursor-pointer';
+        btn.onclick = () => checkAnswer(opt.isCorrect, btn);
+        btn.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <span class="w-6 h-6 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] text-purple-300 group-hover:bg-purple-600 group-hover:text-white transition">
+              ${idx + 1}
+            </span>
+            <span>${opt.text}</span>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-500 text-xs opacity-0 group-hover:opacity-100 transition"></i>
+        `;
+        optContainer.appendChild(btn);
+      });
+
+      document.getElementById('explanationText').innerHTML = currentQuestion.stepByStep;
+    }
+
+    function checkAnswer(isCorrect, clickedBtn) {
+      if (answeredCurrent) return;
+      answeredCurrent = true;
+
+      const banner = document.getElementById('feedbackBanner');
+      const icon = document.getElementById('feedbackIcon');
+      const text = document.getElementById('feedbackText');
+
+      banner.classList.remove('hidden', 'bg-emerald-950/80', 'border-emerald-500/50', 'text-emerald-300', 'bg-rose-950/80', 'border-rose-500/50', 'text-rose-300');
+
+      if (isCorrect) {
+        sound.playCorrect();
+        score += 100 + (streak * 20);
+        streak += 1;
+        
+        banner.classList.add('bg-emerald-950/80', 'border', 'border-emerald-500/50', 'text-emerald-300');
+        icon.className = 'fa-solid fa-circle-check text-emerald-400';
+        text.innerText = `Spot On! Correct Answer (+${100 + (streak - 1) * 20} pts)`;
+
+        if (clickedBtn) {
+          clickedBtn.classList.add('bg-emerald-600/40', 'border-emerald-400');
+        }
+
+        // Auto launch simulation visual verification
+        launchSimulation();
+
+      } else {
+        sound.playWrong();
+        streak = 0;
+
+        banner.classList.add('bg-rose-950/80', 'border', 'border-rose-500/50', 'text-rose-300');
+        icon.className = 'fa-solid fa-circle-xmark text-rose-400';
+        text.innerText = `Incorrect choice. See step-by-step solution below.`;
+
+        if (clickedBtn) {
+          clickedBtn.classList.add('bg-rose-600/40', 'border-rose-400');
+        }
+      }
+
+      updateScoreboard();
+    }
+
+    function toggleExplanation() {
+      sound.playTap();
+      const exp = document.getElementById('explanationBox');
+      exp.classList.toggle('hidden');
+    }
+
+    function updateScoreboard() {
+      document.getElementById('scoreDisplay').innerText = score;
+      document.getElementById('streakDisplay').innerText = streak;
+
+      const badgeContainer = document.getElementById('badgeContainer');
+      let badge = "Novice";
+      let badgeBg = "bg-purple-900/80 border-purple-500/30 text-purple-200";
+
+      if (score >= 800) {
+        badge = "Galactic Master";
+        badgeBg = "bg-amber-500/30 border-amber-400 text-amber-200";
+      } else if (score >= 400) {
+        badge = "Physicist";
+        badgeBg = "bg-cyan-500/30 border-cyan-400 text-cyan-200";
+      } else if (score >= 200) {
+        badge = "Apprentice";
+        badgeBg = "bg-indigo-500/30 border-indigo-400 text-indigo-200";
+      }
+
+      badgeContainer.innerHTML = `<span class="text-xs ${badgeBg} border px-2.5 py-0.5 rounded-md font-extrabold shadow-sm">${badge}</span>`;
+    }
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+
+    /* ===================================================================
+       4. SPEECH RECOGNITION (MICROPHONE VOICE INPUT ENGINE)
+       =================================================================== */
+    let recognition = null;
+    let isListening = false;
+
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.warn("Web Speech API not supported in this browser.");
+        return false;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isListening = true;
+        updateMicUI(true);
+      };
+
+      recognition.onend = () => {
+        if (isListening) {
+          recognition.start();
+        } else {
+          updateMicUI(false);
+        }
+      };
+
+      recognition.onresult = (event) => {
+        const lastResultIndex = event.results.length - 1;
+        const transcript = event.results[lastResultIndex][0].transcript.trim().toLowerCase();
+        console.log("Voice Input Received:", transcript);
+        handleVoiceCommand(transcript);
+      };
+
+      return true;
+    }
+
+    function toggleVoiceControl() {
+      sound.playTap();
+      if (!recognition) {
+        const supported = initSpeechRecognition();
+        if (!supported) {
+          alert("Speech recognition is not supported in this browser. Try Chrome or Edge!");
+          return;
+        }
+      }
+
+      if (isListening) {
+        isListening = false;
+        recognition.stop();
+        updateMicUI(false);
+      } else {
+        try {
+          recognition.start();
+        } catch(e) {
+          console.error(e);
+        }
+      }
+    }
+
+    function updateMicUI(active) {
+      const btn = document.getElementById('micBtn');
+      const icon = document.getElementById('micIcon');
+      const text = document.getElementById('micStatusText');
+      const eq = document.getElementById('eqContainer');
+
+      if (active) {
+        btn.classList.add('mic-active');
+        icon.className = 'fa-solid fa-microphone text-pink-400';
+        text.innerText = 'Listening...';
+        eq.classList.remove('hidden');
+      } else {
+        btn.classList.remove('mic-active');
+        icon.className = 'fa-solid fa-microphone-slash text-slate-400';
+        text.innerText = 'Voice Off';
+        eq.classList.add('hidden');
+      }
+    }
+
+    function handleVoiceCommand(cmd) {
+      if (cmd.includes('launch') || cmd.includes('drop') || cmd.includes('start')) {
+        launchSimulation();
+        return;
+      }
+      if (cmd.includes('reset') || cmd.includes('clear')) {
+        resetSim();
+        return;
+      }
+      if (cmd.includes('pause') || cmd.includes('stop')) {
+        togglePause();
+        return;
+      }
+      if (cmd.includes('play') || cmd.includes('resume')) {
+        if (simState.paused) togglePause();
+        else launchSimulation();
+        return;
+      }
+      if (cmd.includes('next') || cmd.includes('continue')) {
+        generateNewQuestion();
+        return;
+      }
+
+      // Quiz Answer selection commands
+      const optionButtons = document.querySelectorAll('#optionsContainer button');
+      if (cmd.includes('one') || cmd.includes('1') || cmd.includes('first')) {
+        if (optionButtons[0]) optionButtons[0].click();
+        return;
+      }
+      if (cmd.includes('two') || cmd.includes('2') || cmd.includes('second')) {
+        if (optionButtons[1]) optionButtons[1].click();
+        return;
+      }
+      if (cmd.includes('three') || cmd.includes('3') || cmd.includes('third')) {
+        if (optionButtons[2]) optionButtons[2].click();
+        return;
+      }
+      if (cmd.includes('four') || cmd.includes('4') || cmd.includes('fourth')) {
+        if (optionButtons[3]) optionButtons[3].click();
+        return;
+      }
+
+      // Planet direct match check
+      PLANET_DB.forEach(planet => {
+        if (cmd.includes(planet.name.toLowerCase())) {
+          optionButtons.forEach(btn => {
+            if (btn.innerText.toLowerCase().includes(planet.name.toLowerCase())) {
+              btn.click();
+            }
+          });
+        }
+      });
+    }
+
+
+    /* ===================================================================
+       5. KEYBOARD ACCESSIBILITY & INITIALIZATION
+       =================================================================== */
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+      } else if (e.code === 'KeyR') {
+        resetSim();
+      } else if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        const vSlider = document.getElementById('v0Slider');
+        vSlider.value = Math.min(50, parseInt(vSlider.value) + 5);
+        updateSimParameters();
+      } else if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        const vSlider = document.getElementById('v0Slider');
+        vSlider.value = Math.max(-30, parseInt(vSlider.value) - 5);
+        updateSimParameters();
+      } else if (['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) {
+        const idx = parseInt(e.key) - 1;
+        const optionButtons = document.querySelectorAll('#optionsContainer button');
+        if (optionButtons[idx]) optionButtons[idx].click();
+      }
+    });
+
+    // STARTUP APP INIT
+    window.onload = function() {
+      updateSimParameters();
+      generateNewQuestion();
+    };
+  </script>
+</body>
+</html>

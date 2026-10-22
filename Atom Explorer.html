@@ -1,0 +1,595 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Atom Explorer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap">
+<style>
+/* Layout: one centered stage. Atom diagram left, question panel right; stacks on phones. Deep-space indigo with candy-bright particle colors. */
+:root{
+  --bg:#0f1235;
+  --panel:#1b2060;
+  --panel2:#252b78;
+  --line:#3d46a8;
+  --ink:#f4f6ff;
+  --muted:#b4bbf0;
+  --proton:#ff4f81;
+  --neutron:#3fb8ff;
+  --electron:#ffd23f;
+  --on-electron:#2a2300;
+  --good:#35e0a1;
+  --bad:#ff8a3d;
+  --accent:#8b6cff;
+  --c0:#6d4aff; --c1:#0a8a7f; --c2:#c2358f; --c3:#2563eb; --c4:#f5a300;
+  --display:Fredoka,"Trebuchet MS",system-ui,sans-serif;
+  --body:Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;color:var(--ink);font:700 17px/1.5 var(--body);min-height:100%;
+  background:radial-gradient(900px 520px at 88% -8%,rgba(139,108,255,.38),transparent 60%),radial-gradient(700px 480px at -8% 108%,rgba(63,184,255,.24),transparent 60%),var(--bg);
+  padding-block:12px 32px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:1040px;margin:0 auto}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px;font:700 28px/1 var(--display);letter-spacing:.2px}
+.brand small{font:700 13px var(--body);color:var(--muted);letter-spacing:.12em;text-transform:uppercase;display:block;margin-top:4px}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.chip{background:var(--panel);border:2px solid var(--line);border-radius:999px;padding:8px 16px;font:700 15px var(--body);color:var(--ink)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.btn{border:0;border-radius:16px;padding:14px 22px;font:700 18px var(--display);min-height:52px;color:#fff;background:var(--accent);box-shadow:0 5px 0 rgba(0,0,0,.35);transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.btn.go{background:var(--good);color:#06261b}
+.btn.ghost{background:var(--panel2);box-shadow:0 5px 0 rgba(0,0,0,.3)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.card{background:linear-gradient(160deg,var(--panel),var(--panel2));border:2px solid var(--line);border-radius:28px;padding:22px}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:22px;align-items:start}
+@media (max-width:780px){.stage{grid-template-columns:minmax(0,1fr)}}
+.atomwrap{background:radial-gradient(circle at 50% 50%,#2a2f86,#141846 70%);border:2px solid var(--line);border-radius:28px;padding:10px;max-width:520px;width:100%;margin:0 auto}
+.atomwrap svg{display:block;width:100%;height:auto}
+.meta{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.tag{font:700 13px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.dots{list-style:none;display:flex;gap:6px;padding:0;margin:0 0 16px;flex-wrap:wrap}
+.dots li{width:22px;height:10px;border-radius:6px;background:#3a4196}
+.dots li.cur{background:#fff}
+.dots li.ok{background:var(--good)}
+.dots li.no{background:var(--bad)}
+.dots li.part{background:var(--electron)}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.2}
+h2.q{font-size:25px;margin-bottom:14px;font-weight:600}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+.choice{border:0;border-radius:18px;min-height:64px;padding:10px 14px;font:700 19px var(--display);color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.35);text-align:center;transition:transform .08s,opacity .2s}
+.choice:active:not([disabled]){transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.choice.c0{background:var(--c0)}.choice.c1{background:var(--c1)}.choice.c2{background:var(--c2)}.choice.c3{background:var(--c3)}.choice.c4{background:var(--c4);color:#2a1d00}
+.choice[disabled]{cursor:default}
+.choice.dim{opacity:.38}
+.choice.right{outline:5px solid var(--good);outline-offset:2px;opacity:1}
+.choice.right::before{content:"\2713  "}
+.choice.wrong{outline:5px solid var(--bad);outline-offset:2px;opacity:1}
+.choice.wrong::before{content:"\2715  "}
+.typed{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.typed input[type=text]{flex:1 1 180px;min-width:0;border:3px solid var(--line);background:#12164a;color:var(--ink);border-radius:16px;padding:12px 16px;font:700 18px var(--body)}
+.mic{width:56px;min-height:52px;border-radius:16px;border:3px solid var(--line);background:#12164a;display:grid;place-items:center}
+.mic svg{width:26px;height:26px}
+.mic[aria-pressed=true]{background:var(--proton);border-color:#fff;animation:pulse 1s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 10px rgba(255,79,129,.28)}}
+.msg{min-height:1.5em;color:var(--muted);font-size:15px;margin:8px 0 0}
+.fb{margin-top:14px;border-radius:20px;padding:16px 18px;border:3px solid var(--line);background:#12164a}
+.fb[hidden]{display:none!important}
+.fb.good{border-color:var(--good)}
+.fb.bad{border-color:var(--bad)}
+.fb h3{font-size:22px;margin-bottom:6px}
+.fb p{margin:0 0 12px;font-weight:600;color:#e3e6ff}
+.fb ul{margin:0 0 12px;padding:0;list-style:none;display:grid;gap:6px;font-weight:600}
+.dotp{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:baseline}
+/* part 2 */
+.tilebox{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.tile{position:relative;width:150px;height:170px;border-radius:24px;background:linear-gradient(150deg,#ff7a59,#ff4f81 55%,#8b6cff);box-shadow:0 8px 0 rgba(0,0,0,.35);flex:none;color:#fff;font-family:var(--display)}
+.tile .A{position:absolute;left:14px;top:10px;font-size:30px;font-weight:700}
+.tile .Z{position:absolute;left:14px;bottom:36px;font-size:30px;font-weight:700}
+.tile .sym{position:absolute;inset:0;display:grid;place-items:center;font-size:72px;font-weight:700;padding-left:22px}
+.tile .nm{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:17px;font-weight:600}
+.legend{display:grid;gap:6px;font-weight:700;min-width:0}
+.legend span b{font-family:var(--display);font-size:22px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.field{background:#12164a;border:3px solid var(--line);border-radius:20px;padding:10px 12px}
+.field label{display:block;font:700 16px var(--display);margin-bottom:6px}
+.field .ctl{display:flex;gap:6px;align-items:center}
+.field input{width:100%;min-width:0;text-align:center;border:0;background:transparent;color:var(--ink);font:700 34px var(--display);padding:0}
+.field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.field input[type=number]{-moz-appearance:textfield;appearance:textfield}
+.step{flex:none;width:44px;height:44px;border-radius:12px;border:0;background:var(--panel2);font:700 24px var(--display);color:#fff}
+.field.p{border-color:var(--proton)}.field.p label{color:var(--proton)}
+.field.n{border-color:var(--neutron)}.field.n label{color:var(--neutron)}
+.field.e{border-color:var(--electron)}.field.e label{color:var(--electron)}
+.field.right{background:rgba(53,224,161,.18);box-shadow:0 0 0 4px var(--good)}
+.field.wrong{background:rgba(255,138,61,.2);box-shadow:0 0 0 4px var(--bad)}
+.hint{background:#12164a;border:2px dashed var(--line);border-radius:16px;padding:10px 14px;font-weight:600;color:#dfe3ff;margin:0 0 10px}
+.hint[hidden]{display:none!important}
+/* intro / results */
+.hero{text-align:center;padding:30px 18px}
+.hero h1{font-size:clamp(34px,7vw,56px);margin-bottom:10px}
+.hero p{max-width:60ch;margin:0 auto 18px;color:#dfe3ff;font-weight:600}
+.parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:20px 0;text-align:left}
+.parts .card{padding:18px}
+.parts h3{font-size:22px;margin-bottom:6px}
+.parts p{margin:0;font-size:16px;color:#dfe3ff}
+.inputs{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 22px}
+.ring{width:170px;height:170px;margin:0 auto 8px;display:block}
+.bars{display:grid;gap:12px;max-width:520px;margin:16px auto;text-align:left}
+.bar{background:#12164a;border-radius:999px;height:18px;overflow:hidden;border:2px solid var(--line)}
+.bar i{display:block;height:100%;border-radius:999px}
+.review{max-width:640px;margin:18px auto 0;text-align:left}
+.review ul{padding-left:20px;display:grid;gap:8px;font-weight:600;color:#e3e6ff}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><ellipse cx="22" cy="22" rx="19" ry="8" fill="none" stroke="#8b6cff" stroke-width="3"/><ellipse cx="22" cy="22" rx="19" ry="8" fill="none" stroke="#3fb8ff" stroke-width="3" transform="rotate(60 22 22)"/><ellipse cx="22" cy="22" rx="19" ry="8" fill="none" stroke="#ff4f81" stroke-width="3" transform="rotate(120 22 22)"/><circle cx="22" cy="22" r="5" fill="#ffd23f"/></svg>
+      <div>Atom Explorer<small>Graded exercise</small></div>
+    </div>
+    <div class="tools">
+      <span class="chip" id="score" hidden></span>
+      <button class="chip" id="snd" type="button" aria-pressed="true">Sound: On</button>
+    </div>
+  </header>
+  <main id="app"></main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s);};
+var has=function(o,k){return Object.prototype.hasOwnProperty.call(o,k);};
+var RM=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+var shuffle=function(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;};
+var pick=function(a){return a[Math.floor(Math.random()*a.length)];};
+
+/* ---------- sound ---------- */
+var ctx=null;
+function ac(){
+  try{
+    if(!ctx){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ctx=new C();}
+    if(ctx.state==='suspended')ctx.resume();
+  }catch(e){return null;}
+  return ctx;
+}
+function tone(f,t0,d,type,g,slide){
+  var c=ac();if(!c)return;
+  var o=c.createOscillator(),v=c.createGain(),n=c.currentTime+t0;
+  o.type=type||'sine';
+  o.frequency.setValueAtTime(f,n);
+  if(slide)o.frequency.exponentialRampToValueAtTime(slide,n+d);
+  v.gain.setValueAtTime(0.0001,n);
+  v.gain.exponentialRampToValueAtTime(g||0.2,n+0.02);
+  v.gain.exponentialRampToValueAtTime(0.0001,n+d);
+  o.connect(v);v.connect(c.destination);
+  o.start(n);o.stop(n+d+0.05);
+}
+function playCorrect(){
+  if(!S.sound)return;
+  [523.25,659.25,783.99,1046.5].forEach(function(f,i){tone(f,i*0.09,0.28,'triangle',0.22);});
+  tone(2093,0.34,0.3,'sine',0.08);
+}
+function playWrong(){
+  if(!S.sound)return;
+  tone(233,0,0.3,'sawtooth',0.13,150);
+  tone(196,0.2,0.45,'sawtooth',0.13,98);
+}
+function playFanfare(good){
+  if(!S.sound)return;
+  var seq=good?[523.25,659.25,783.99,1046.5,783.99,1046.5,1318.5]:[392,349.23,311.13];
+  seq.forEach(function(f,i){tone(f,i*0.13,0.3,good?'triangle':'sine',0.2);});
+}
+function say(text){
+  if(!S.sound||!('speechSynthesis' in window))return;
+  try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.rate=0.95;speechSynthesis.speak(u);}catch(e){}
+}
+
+/* ---------- content ---------- */
+var PARTS={proton:'Proton',neutron:'Neutron',electron:'Electron',nucleus:'Nucleus',shell:'Energy level (shell)'};
+var EXPLAIN={
+  proton:'Protons have a positive charge and sit in the nucleus. The number of protons is the atomic number.',
+  neutron:'Neutrons have no charge. They sit in the nucleus together with the protons.',
+  electron:'Electrons are tiny, negatively charged particles that move around the nucleus.',
+  nucleus:'The nucleus is the dense center of the atom. It holds the protons and neutrons.',
+  shell:'Electrons travel in layers around the nucleus called energy levels, or shells.'
+};
+var ELEMENTS=[['Hydrogen','H',1,1],['Helium','He',2,4],['Lithium','Li',3,7],['Carbon','C',6,12],['Nitrogen','N',7,14],['Oxygen','O',8,16],['Fluorine','F',9,19],['Sodium','Na',11,23],['Magnesium','Mg',12,24],['Aluminum','Al',13,27],['Phosphorus','P',15,31],['Chlorine','Cl',17,35],['Calcium','Ca',20,40],['Iron','Fe',26,56],['Copper','Cu',29,64],['Silver','Ag',47,108]];
+var P1_TOTAL=10,P2_TOTAL=8;
+
+function buildP1(){
+  var d=[
+    {part:'electron',idx:pick([0,1,2])},
+    {part:'proton',idx:pick([0,1,2])},
+    {part:'neutron',idx:pick([0,1,2,3])},
+    {part:'nucleus',idx:0},
+    {part:'shell',idx:pick([1,2])}
+  ].map(function(x){return {kind:'diagram',part:x.part,hl:{part:x.part,idx:x.idx},prompt:'Which part of the atom is marked by the pulsing white ring?'};});
+  var t=[
+    {part:'electron',prompt:'Which particle carries a negative charge?'},
+    {part:'proton',prompt:'Which particle carries a positive charge?'},
+    {part:'neutron',prompt:'Which particle has no charge at all?'},
+    {part:'nucleus',prompt:'What is the tiny, dense center of the atom called?'},
+    {part:'shell',prompt:'Electrons move around the nucleus in layers. What are these layers called?'}
+  ].map(function(x){return {kind:'text',part:x.part,hl:null,prompt:x.prompt};});
+  return shuffle(d.concat(t));
+}
+function buildP2(){
+  return shuffle(ELEMENTS).slice(0,P2_TOTAL).map(function(e){return {name:e[0],sym:e[1],z:e[2],a:e[3]};});
+}
+
+/* ---------- atom drawing ---------- */
+function halo(x,y,r){
+  var a=RM?'':'<animate attributeName="r" values="'+r+';'+(r+6)+';'+r+'" dur="1.1s" repeatCount="indefinite"/>';
+  return '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="7 6">'+a+'</circle>';
+}
+function atomSVG(hl){
+  hl=hl||{};
+  var C=200,s='<svg viewBox="0 0 400 400" role="img" aria-label="Diagram of an atom with a nucleus and electrons">';
+  s+='<defs>'
+    +'<radialGradient id="gP" cx="35%" cy="30%"><stop offset="0" stop-color="#ffb0c8"/><stop offset="1" stop-color="#ff4f81"/></radialGradient>'
+    +'<radialGradient id="gN" cx="35%" cy="30%"><stop offset="0" stop-color="#bfe8ff"/><stop offset="1" stop-color="#3fb8ff"/></radialGradient>'
+    +'<radialGradient id="gE" cx="35%" cy="30%"><stop offset="0" stop-color="#fff3b0"/><stop offset="1" stop-color="#ffc400"/></radialGradient>'
+    +'<filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+    +'</defs>';
+  [[85,1],[150,2]].forEach(function(r){
+    var on=hl.part==='shell'&&hl.idx===r[1];
+    var an=(on&&!RM)?'<animate attributeName="opacity" values="1;0.4;1" dur="1.1s" repeatCount="indefinite"/>':'';
+    s+='<circle cx="'+C+'" cy="'+C+'" r="'+r[0]+'" fill="none" stroke="'+(on?'#fff':'#7f8cff')+'" stroke-width="'+(on?8:3)+'" opacity="'+(on?1:0.8)+'">'+an+'</circle>';
+  });
+  var pos=[[0,0,'n'],[23,0,'p'],[11.5,19.9,'n'],[-11.5,19.9,'p'],[-23,0,'n'],[-11.5,-19.9,'p'],[11.5,-19.9,'n']];
+  var pi=0,ni=0;
+  pos.forEach(function(p){
+    var x=C+p[0],y=C+p[1],isP=p[2]==='p';
+    s+='<circle cx="'+x+'" cy="'+y+'" r="12.5" fill="url(#'+(isP?'gP':'gN')+')" stroke="rgba(0,0,0,.25)" stroke-width="1"/>';
+    if(isP&&hl.part==='proton'&&hl.idx===pi)s+=halo(x,y,21);
+    if(!isP&&hl.part==='neutron'&&hl.idx===ni)s+=halo(x,y,21);
+    if(isP)pi++;else ni++;
+  });
+  if(hl.part==='nucleus')s+=halo(C,C,50);
+  function ring(r,angles,dur,dir,start){
+    var g='<g>';
+    if(!RM)g+='<animateTransform attributeName="transform" type="rotate" from="0 200 200" to="'+(dir*360)+' 200 200" dur="'+dur+'s" repeatCount="indefinite"/>';
+    angles.forEach(function(a,i){
+      var rad=a*Math.PI/180,x=(C+r*Math.cos(rad)).toFixed(1),y=(C+r*Math.sin(rad)).toFixed(1);
+      g+='<circle cx="'+x+'" cy="'+y+'" r="10" fill="url(#gE)" filter="url(#glow)"/>';
+      if(hl.part==='electron'&&hl.idx===start+i)g+=halo(x,y,19);
+    });
+    return g+'</g>';
+  }
+  s+=ring(85,[40,220],9,1,0);
+  s+=ring(150,[130],15,-1,2);
+  return s+'</svg>';
+}
+
+/* ---------- state ---------- */
+var S={screen:'intro',sound:true,p1:[],p2:[],i:0,answered:false,log1:[],log2:[],listening:false};
+var app=$('#app');
+
+function scoreTotals(){
+  var a=S.log1.filter(function(x){return x.ok;}).length;
+  var b=S.log2.reduce(function(n,x){return n+x.pts;},0);
+  return {p1:a,p2:b};
+}
+function updateScore(){
+  var el=$('#score');
+  if(S.screen==='p1'){el.hidden=false;el.textContent='Part 1 score: '+scoreTotals().p1+' / '+P1_TOTAL;}
+  else if(S.screen==='p2'){el.hidden=false;el.textContent='Part 2 score: '+scoreTotals().p2+' / '+(P2_TOTAL*3);}
+  else el.hidden=true;
+}
+function dots(total,log,cur){
+  var h='<ol class="dots" aria-label="Progress">';
+  for(var k=0;k<total;k++){
+    var c='';
+    if(log[k])c=log[k].ok?'ok':(log[k].pts>0?'part':'no');else if(k===cur)c='cur';
+    h+='<li class="'+c+'"></li>';
+  }
+  return h+'</ol>';
+}
+var MIC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+
+/* ---------- screens ---------- */
+function viewIntro(){
+  S.screen='intro';updateScore();
+  app.innerHTML='<section class="card hero">'
+   +'<div class="atomwrap" style="max-width:300px;margin-bottom:18px">'+atomSVG({})+'</div>'
+   +'<h1>Atom Explorer</h1>'
+   +'<p>Test what you know about the atom. Two parts, graded at the end. Every right answer plays a happy tune and every wrong answer plays a different, lower sound.</p>'
+   +'<div class="parts">'
+   +'<div class="card"><h3>Part 1: Parts of the atom</h3><p>'+P1_TOTAL+' questions. Name the proton, neutron, electron, nucleus and energy level.</p></div>'
+   +'<div class="card"><h3>Part 2: Count the particles</h3><p>'+P2_TOTAL+' elements. Use the atomic number and mass number to find protons, neutrons and electrons.</p></div>'
+   +'</div>'
+   +'<div class="inputs"><span class="chip">Mouse</span><span class="chip">Touchscreen</span><span class="chip">Keyboard</span><span class="chip">Microphone</span></div>'
+   +'<button class="btn go" data-act="start" type="button">Start Part 1</button>'
+   +'</section>';
+}
+
+function viewP1(){
+  S.screen='p1';S.answered=false;updateScore();
+  var q=S.p1[S.i];
+  var opts=shuffle(Object.keys(PARTS));
+  var btns=opts.map(function(k,n){return '<button type="button" class="choice c'+n+'" data-act="choose" data-part="'+k+'">'+PARTS[k]+'</button>';}).join('');
+  app.innerHTML='<div class="stage">'
+   +'<div class="atomwrap">'+atomSVG(q.hl)+'</div>'
+   +'<section class="card">'
+   +'<div class="meta"><span class="tag">Part 1 &middot; Question '+(S.i+1)+' of '+P1_TOTAL+'</span><button class="chip" type="button" data-act="say">Read aloud</button></div>'
+   +dots(P1_TOTAL,S.log1,S.i)
+   +'<h2 class="q" id="qtext">'+q.prompt+'</h2>'
+   +'<div class="choices" id="choices">'+btns+'</div>'
+   +'<form class="typed" data-act="typed" autocomplete="off"><input id="ans" type="text" placeholder="Or type or say your answer" aria-label="Type your answer" enterkeyhint="done"><button class="mic" id="mic" type="button" data-act="mic" aria-pressed="false" aria-label="Answer with microphone">'+MIC+'</button><button class="btn" type="submit">Check</button></form>'
+   +'<p class="msg" id="msg" aria-live="polite"></p>'
+   +'<div class="fb" id="fb" hidden aria-live="polite"></div>'
+   +'</section></div>';
+}
+
+function viewBetween(){
+  S.screen='between';updateScore();
+  var t=scoreTotals();
+  app.innerHTML='<section class="card hero"><h1>Part 1 complete</h1><p>You scored <b>'+t.p1+' out of '+P1_TOTAL+'</b> on the parts of the atom.</p>'
+   +'<p>Next up: count protons, neutrons and electrons. Remember that the atomic number is the number of protons.</p>'
+   +'<button class="btn go" data-act="to2" type="button">Start Part 2</button></section>';
+  playFanfare(t.p1>=P1_TOTAL*0.6);
+  say('Part 1 complete. You scored '+t.p1+' out of '+P1_TOTAL+'.');
+}
+
+function viewP2(){
+  S.screen='p2';S.answered=false;updateScore();
+  var q=S.p2[S.i];
+  function fld(k,cls,label){
+    return '<div class="field '+cls+'" id="w-'+k+'"><label for="f-'+k+'">'+label+'</label><div class="ctl">'
+     +'<button class="step" type="button" data-act="step" data-f="'+k+'" data-d="-1" aria-label="Decrease '+label+'">&minus;</button>'
+     +'<input id="f-'+k+'" type="number" inputmode="numeric" min="0" max="150" step="1" placeholder="?" aria-label="Number of '+label.toLowerCase()+'">'
+     +'<button class="step" type="button" data-act="step" data-f="'+k+'" data-d="1" aria-label="Increase '+label+'">+</button></div></div>';
+  }
+  app.innerHTML='<section class="card">'
+   +'<div class="meta"><span class="tag">Part 2 &middot; Element '+(S.i+1)+' of '+P2_TOTAL+'</span><button class="chip" type="button" data-act="say">Read aloud</button></div>'
+   +dots(P2_TOTAL,S.log2,S.i)
+   +'<h2 class="q">How many protons, neutrons and electrons are in a neutral atom of '+q.name+'?</h2>'
+   +'<div class="tilebox"><div class="tile" aria-hidden="true"><span class="A">'+q.a+'</span><span class="Z">'+q.z+'</span><span class="sym">'+q.sym+'</span><span class="nm">'+q.name+'</span></div>'
+   +'<div class="legend"><span>Atomic number: <b>'+q.z+'</b></span><span>Mass number: <b>'+q.a+'</b></span><button class="chip" type="button" data-act="hint">Show hint</button></div></div>'
+   +'<p class="hint" id="hint" hidden>Protons = atomic number. Neutrons = mass number &minus; atomic number. Electrons = protons in a neutral atom.</p>'
+   +'<form data-act="check" autocomplete="off"><div class="fields">'
+   +fld('proton','p','Protons')+fld('neutron','n','Neutrons')+fld('electron','e','Electrons')
+   +'</div><div class="row"><button class="btn" type="submit" id="chk">Check answer</button>'
+   +'<button class="chip mic" id="mic" type="button" data-act="mic" aria-pressed="false" aria-label="Answer with microphone" style="width:56px;border-radius:16px">'+MIC+'</button>'
+   +'<span class="msg" style="margin:0">Say: &ldquo;protons 3, neutrons 4, electrons 3&rdquo;</span></div></form>'
+   +'<p class="msg" id="msg" aria-live="polite"></p>'
+   +'<div class="fb" id="fb" hidden aria-live="polite"></div>'
+   +'</section>';
+}
+
+function viewResults(){
+  S.screen='results';updateScore();
+  var t=scoreTotals(),p1=t.p1/P1_TOTAL,p2=t.p2/(P2_TOTAL*3);
+  var pct=Math.round((p1+p2)/2*100);
+  var msg=pct>=90?'Outstanding! You are an atom expert.':pct>=75?'Great job! You know your atoms.':pct>=60?'Good effort. A little more practice will help.':'Keep practicing. You can do it!';
+  var circ=2*Math.PI*54,off=circ*(1-pct/100);
+  var col=pct>=75?'var(--good)':pct>=60?'var(--electron)':'var(--bad)';
+  var missed=[];
+  S.log1.forEach(function(x){if(!x.ok)missed.push('Part 1: '+x.q+' Answer: '+x.expected+'.');});
+  S.log2.forEach(function(x){if(!x.ok)missed.push('Part 2: '+x.name+' (atomic number '+x.z+', mass number '+x.a+') has '+x.exp.proton+' protons, '+x.exp.neutron+' neutrons and '+x.exp.electron+' electrons.');});
+  app.innerHTML='<section class="card hero"><h1>Your results</h1>'
+   +'<svg class="ring" viewBox="0 0 128 128" role="img" aria-label="Total score '+pct+' percent"><circle cx="64" cy="64" r="54" fill="none" stroke="#12164a" stroke-width="14"/><circle cx="64" cy="64" r="54" fill="none" stroke="'+col+'" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+circ.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 64 64)"/><text x="64" y="73" text-anchor="middle" font-family="Fredoka,sans-serif" font-size="30" font-weight="700" fill="#f4f6ff">'+pct+'%</text></svg>'
+   +'<p style="font:600 24px var(--display);margin-bottom:6px">'+msg+'</p>'
+   +'<div class="bars"><div><div class="row" style="justify-content:space-between"><span>Part 1: Parts of the atom</span><b>'+t.p1+' / '+P1_TOTAL+'</b></div><div class="bar"><i style="width:'+(p1*100)+'%;background:var(--neutron)"></i></div></div>'
+   +'<div><div class="row" style="justify-content:space-between"><span>Part 2: Count the particles</span><b>'+t.p2+' / '+(P2_TOTAL*3)+'</b></div><div class="bar"><i style="width:'+(p2*100)+'%;background:var(--proton)"></i></div></div></div>'
+   +(missed.length?'<div class="review"><h3 style="margin-bottom:8px">Review what you missed</h3><ul>'+missed.map(function(m){return '<li>'+m+'</li>';}).join('')+'</ul></div>':'<p>No mistakes. Perfect score!</p>')
+   +'<p style="margin-top:20px"><button class="btn go" data-act="retry" type="button">Try again</button></p></section>';
+  playFanfare(pct>=60);
+  say('You scored '+pct+' percent. '+msg);
+}
+
+/* ---------- logic ---------- */
+function msg(t){var m=$('#msg');if(m)m.textContent=t||'';}
+var PATS=[['shell',/\b(shells?|energy levels?|orbits?|orbitals?|levels?)\b/],['nucleus',/\b(nucleus|nuclei|core)\b/],['proton',/\bprotons?\b/],['neutron',/\bneutrons?\b/],['electron',/\belectrons?\b/]];
+function matchPart(t){
+  t=String(t||'').toLowerCase();
+  for(var i=0;i<PATS.length;i++)if(PATS[i][1].test(t))return PATS[i][0];
+  return null;
+}
+var ONES={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
+var TENS={twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+function numberize(t){
+  var w=t.toLowerCase().replace(/-/g,' ').split(/\s+/),out=[];
+  for(var i=0;i<w.length;i++){
+    var x=w[i];
+    if(has(TENS,x)){
+      if(i+1<w.length&&has(ONES,w[i+1])&&ONES[w[i+1]]>0&&ONES[w[i+1]]<10){out.push(String(TENS[x]+ONES[w[i+1]]));i++;}
+      else out.push(String(TENS[x]));
+    }else if(has(ONES,x))out.push(String(ONES[x]));
+    else out.push(x);
+  }
+  return out.join(' ');
+}
+function parseCounts(t){
+  t=numberize(String(t).replace(/[,.]/g,' '));
+  var res={},re=/(proton|neutron|electron)s?\s*(?:is|are|equals?|=|:|has|have|of)?\s*(\d+)/g,m,any=false;
+  while((m=re.exec(t))){res[m[1]]=+m[2];any=true;}
+  if(!any){var n=t.match(/\d+/);if(n)res.single=+n[0];}
+  return res;
+}
+
+function feedbackSpeech(ok,text){
+  setTimeout(function(){say(text);},ok?650:750);
+}
+
+function answerP1(part,shown){
+  if(S.answered)return;
+  var q=S.p1[S.i],ok=part===q.part;
+  S.answered=true;
+  S.log1[S.i]={ok:ok,q:q.prompt,expected:PARTS[q.part],given:PARTS[part]};
+  updateScore();
+  var btns=document.querySelectorAll('#choices .choice');
+  Array.prototype.forEach.call(btns,function(b){
+    b.disabled=true;
+    if(b.dataset.part===q.part)b.classList.add('right');
+    else if(b.dataset.part===part)b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  var inp=$('#ans');if(inp){inp.disabled=true;}
+  var cheer=pick(['Correct!','Well done!','Great job!','Nice work!']);
+  var fb=$('#fb');
+  fb.hidden=false;fb.className='fb '+(ok?'good':'bad');
+  fb.innerHTML='<h3>'+(ok?cheer:'Not quite. The answer is '+PARTS[q.part]+'.')+'</h3><p>'+EXPLAIN[q.part]+'</p><button class="btn go" type="button" data-act="next" id="nextBtn">'+(S.i+1>=P1_TOTAL?'Finish Part 1':'Next question')+'</button>';
+  (ok?playCorrect:playWrong)();
+  feedbackSpeech(ok,ok?cheer:'Not quite. The answer is '+PARTS[q.part]);
+  var nb=$('#nextBtn');if(nb)nb.focus({preventScroll:false});
+}
+
+function checkP2(){
+  if(S.answered)return;
+  var q=S.p2[S.i],keys=['proton','neutron','electron'],vals={};
+  for(var i=0;i<keys.length;i++){
+    var v=$('#f-'+keys[i]).value.trim();
+    if(v===''){msg('Fill in all three boxes first.');return;}
+    vals[keys[i]]=parseInt(v,10);
+  }
+  var exp={proton:q.z,neutron:q.a-q.z,electron:q.z},pts=0;
+  S.answered=true;
+  keys.forEach(function(k){
+    var okk=vals[k]===exp[k];
+    if(okk)pts++;
+    $('#w-'+k).classList.add(okk?'right':'wrong');
+    $('#f-'+k).disabled=true;
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.step'),function(b){b.disabled=true;});
+  $('#chk').disabled=true;
+  var ok=pts===3;
+  S.log2[S.i]={ok:ok,pts:pts,name:q.name,z:q.z,a:q.a,exp:exp,given:vals};
+  updateScore();
+  var cheer=pick(['Correct!','Well done!','Great job!','Nice work!']);
+  var title=ok?cheer:(pts+' of 3 correct. Let us check the working.');
+  var fb=$('#fb');
+  fb.hidden=false;fb.className='fb '+(ok?'good':'bad');
+  fb.innerHTML='<h3>'+title+'</h3><ul>'
+   +'<li><span class="dotp" style="background:var(--proton)"></span>Protons = atomic number = <b>'+exp.proton+'</b></li>'
+   +'<li><span class="dotp" style="background:var(--neutron)"></span>Neutrons = mass number &minus; atomic number = '+q.a+' &minus; '+q.z+' = <b>'+exp.neutron+'</b></li>'
+   +'<li><span class="dotp" style="background:var(--electron)"></span>Electrons = protons in a neutral atom = <b>'+exp.electron+'</b></li></ul>'
+   +'<button class="btn go" type="button" data-act="next" id="nextBtn">'+(S.i+1>=P2_TOTAL?'See my results':'Next element')+'</button>';
+  (ok?playCorrect:playWrong)();
+  feedbackSpeech(ok,ok?cheer:(pts+' of 3 correct. '+exp.proton+' protons, '+exp.neutron+' neutrons, '+exp.electron+' electrons.'));
+  var nb=$('#nextBtn');if(nb)nb.focus({preventScroll:false});
+}
+
+function next(){
+  if(!S.answered)return;
+  try{if('speechSynthesis' in window)speechSynthesis.cancel();}catch(e){}
+  S.i++;
+  if(S.screen==='p1'){if(S.i>=P1_TOTAL)viewBetween();else viewP1();}
+  else if(S.screen==='p2'){if(S.i>=P2_TOTAL)viewResults();else viewP2();}
+  window.scrollTo(0,0);
+}
+
+/* ---------- microphone ---------- */
+var rec=null;
+function setListening(on){
+  S.listening=on;
+  var m=$('#mic');if(m)m.setAttribute('aria-pressed',on?'true':'false');
+  if(on)msg('Listening...');
+}
+function listen(){
+  if(S.answered)return;
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){msg('Voice input is not supported in this browser. Use the keyboard, mouse or touch instead.');return;}
+  if(S.listening&&rec){try{rec.stop();}catch(e){}return;}
+  try{
+    rec=new SR();rec.lang='en-US';rec.interimResults=false;rec.maxAlternatives=4;
+    rec.onresult=function(e){
+      var alts=[];
+      for(var i=0;i<e.results[0].length;i++)alts.push(e.results[0][i].transcript);
+      handleSpeech(alts);
+    };
+    rec.onerror=function(e){
+      var c=e&&e.error;
+      if(c==='not-allowed'||c==='service-not-allowed')msg('The microphone is blocked here. Allow microphone access in your browser, or open this app as a saved file. You can still type or tap.');
+      else if(c==='no-speech')msg('I did not hear anything. Tap the mic and try again.');
+      else if(c==='network')msg('Voice input needs an internet connection.');
+      else msg('Voice input did not work. You can still type or tap.');
+    };
+    rec.onend=function(){setListening(false);};
+    setListening(true);
+    rec.start();
+  }catch(err){setListening(false);msg('Voice input is not available here. You can still type or tap.');}
+}
+function handleSpeech(alts){
+  if(S.screen==='p1'){
+    for(var i=0;i<alts.length;i++){var p=matchPart(alts[i]);if(p){var inp=$('#ans');if(inp)inp.value=alts[0];answerP1(p,alts[i]);return;}}
+    msg('I heard "'+alts[0]+'". Try saying proton, neutron, electron, nucleus or energy level.');
+  }else if(S.screen==='p2'){
+    for(var j=0;j<alts.length;j++){
+      var r=parseCounts(alts[j]),found=false;
+      ['proton','neutron','electron'].forEach(function(k){if(has(r,k)){$('#f-'+k).value=r[k];found=true;}});
+      if(!found&&has(r,'single')){
+        var a=document.activeElement,tgt=(a&&a.id&&a.id.indexOf('f-')===0)?a:null;
+        if(!tgt){['proton','neutron','electron'].some(function(k){var el=$('#f-'+k);if(el.value===''){tgt=el;return true;}return false;});}
+        if(tgt){tgt.value=r.single;found=true;}
+      }
+      if(found){msg('Heard: "'+alts[j]+'". Check the boxes, then press Check answer.');return;}
+    }
+    msg('I heard "'+alts[0]+'". Try: protons 3, neutrons 4, electrons 3.');
+  }
+}
+
+/* ---------- events ---------- */
+function act(name,el){
+  switch(name){
+    case 'start':S.p1=buildP1();S.p2=buildP2();S.log1=[];S.log2=[];S.i=0;playCorrect();viewP1();window.scrollTo(0,0);break;
+    case 'to2':S.i=0;viewP2();window.scrollTo(0,0);break;
+    case 'choose':answerP1(el.dataset.part);break;
+    case 'typed':
+      var v=$('#ans').value;
+      if(!v.trim()){msg('Type or say an answer, or tap one of the buttons.');break;}
+      var p=matchPart(v);
+      if(!p){msg('I did not recognize that. Try proton, neutron, electron, nucleus or energy level.');break;}
+      answerP1(p,v);break;
+    case 'check':checkP2();break;
+    case 'mic':listen();break;
+    case 'say':readAloud();break;
+    case 'next':next();break;
+    case 'hint':var h=$('#hint');h.hidden=!h.hidden;el.textContent=h.hidden?'Show hint':'Hide hint';break;
+    case 'step':
+      if(S.answered)break;
+      var f=$('#f-'+el.dataset.f),n=parseInt(f.value||'0',10)+parseInt(el.dataset.d,10);
+      f.value=Math.max(0,Math.min(150,n));break;
+    case 'retry':S.screen='intro';viewIntro();window.scrollTo(0,0);break;
+  }
+}
+function readAloud(){
+  if(!('speechSynthesis' in window)){return;}
+  var t='';
+  if(S.screen==='p1')t=S.p1[S.i].prompt;
+  else if(S.screen==='p2'){var q=S.p2[S.i];t=q.name+'. Atomic number '+q.z+'. Mass number '+q.a+'. How many protons, neutrons and electrons?';}
+  try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.rate=0.95;speechSynthesis.speak(u);}catch(e){}
+}
+app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if(!b||b.tagName==='FORM')return;act(b.dataset.act,b);});
+app.addEventListener('submit',function(e){e.preventDefault();var f=e.target.closest('form');if(f)act(f.dataset.act,f);});
+document.addEventListener('keydown',function(e){
+  ac();
+  var tag=(document.activeElement&&document.activeElement.tagName)||'';
+  var typing=tag==='INPUT'||tag==='TEXTAREA';
+  if(e.key==='Enter'&&S.answered&&!typing&&tag!=='BUTTON'){e.preventDefault();next();return;}
+  if(S.screen==='p1'&&!S.answered&&!typing&&/^[1-5]$/.test(e.key)){
+    var b=document.querySelectorAll('#choices .choice')[+e.key-1];if(b)b.click();
+  }
+});
+document.addEventListener('pointerdown',function(){ac();},{passive:true});
+$('#snd').addEventListener('click',function(){
+  S.sound=!S.sound;
+  this.textContent='Sound: '+(S.sound?'On':'Off');
+  this.setAttribute('aria-pressed',S.sound?'true':'false');
+  if(S.sound)playCorrect();else{try{if('speechSynthesis' in window)speechSynthesis.cancel();}catch(e){}}
+});
+
+viewIntro();
+})();
+</script>
+
+</body></html>
